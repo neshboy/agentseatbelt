@@ -1,0 +1,45 @@
+{
+  "name": "agentseatbelt",
+  "version": "0.1.0",
+  "description": "Policy-enforced command wrapper with tamper-evident audit logging for AI coding agents.",
+  "license": "MIT",
+  "author": "AgentSeatbelt contributors",
+  "keywords": [
+    "ai-agents",
+    "security",
+    "sandbox",
+    "policy",
+    "audit-log",
+    "cli"
+  ],
+  "main": "dist/cli.js",
+  "bin": {
+    "agentseatbelt": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "pretest": "npm run build",
+    "test": "vitest run",
+    "test:unit-only": "vitest run test/audit.test.ts test/policy.test.ts"
+  },
+  "dependencies": {
+    "cross-spawn": "^7.0.6",
+    "js-yaml": "^4.1.0",
+    "minimatch": "^9.0.5"
+  },
+  "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.14.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.5.0",
+    "vitest": "^1.6.0"
+  }
+}
