@@ -1,5 +1,9 @@
 # AgentSeatbelt
 
+<img src="docs/assets/demo.svg" alt="agentseatbelt denying a real rm -rf command and verifying its audit log" width="700" />
+
+<sub>A real recorded terminal session - real allowed command, real denied command, real audit-log verification.</sub>
+
 **AgentSeatbelt puts a policy check between your AI coding agent and your shell.** Instead of letting an
 agent framework run arbitrary commands directly, it runs them through AgentSeatbelt, which checks each
 command against a declarative allow/deny policy file *before* executing anything, and writes a
