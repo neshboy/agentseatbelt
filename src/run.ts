@@ -1,6 +1,6 @@
 import spawn from "cross-spawn";
 import { existsSync } from "node:fs";
-import { appendAuditEntry, getLastHash, Decision } from "./audit";
+import { appendAuditEntryLocked, Decision } from "./audit";
 import { evaluate, loadPolicy } from "./policy";
 import { confirm, isInteractive } from "./prompt";
 
@@ -42,10 +42,14 @@ export async function runCommand(opts: RunOptions): Promise<number> {
   }
 
   const decision = evaluate(policy, command, args, cwd);
-  const { hash: prevHash, seq: prevSeq } = getLastHash(logPath);
 
+  // appendAuditEntryLocked re-reads the true last hash/seq under a
+  // cross-process lock immediately before appending, so a long `ask`
+  // confirmation wait (or a second concurrent `agentseatbelt run` against
+  // the same log) can never race with this append and corrupt the hash
+  // chain.
   const record = (decisionLabel: Decision, exitCode: number | null) => {
-    appendAuditEntry(logPath, { cwd, command, args, decision: decisionLabel, reason: decision.reason, exitCode }, prevHash, prevSeq + 1);
+    appendAuditEntryLocked(logPath, { cwd, command, args, decision: decisionLabel, reason: decision.reason, exitCode });
   };
 
   if (decision.action === "deny") {

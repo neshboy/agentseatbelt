@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { basename, extname } from "node:path";
 import { load } from "js-yaml";
 import { minimatch } from "minimatch";
 
@@ -95,12 +96,49 @@ export function evaluate(policy: Policy, command: string, args: string[], cwd: s
   return { action: policy.default, reason: "no rule matched; applied policy default", ruleIndex: null };
 }
 
+// Windows executable suffixes that should be ignored when comparing a
+// path-qualified invocation (e.g. "RM.EXE") against a bare rule name
+// (e.g. "rm").
+const WINDOWS_EXECUTABLE_EXTENSIONS = new Set([".exe", ".cmd", ".bat", ".com", ".ps1"]);
+
+/**
+ * Normalize a command/rule name for name-based matching: strip any
+ * directory component (so "/bin/rm", "./rm", and "rm" are equivalent) and,
+ * on Windows, strip a trailing .exe/.cmd/.bat/.com/.ps1 suffix and
+ * lower-case the result (so "RM.EXE" matches "rm").
+ */
+function normalizeCommandForMatch(command: string): string {
+  let base = basename(command);
+  if (process.platform === "win32") {
+    const ext = extname(base).toLowerCase();
+    if (WINDOWS_EXECUTABLE_EXTENSIONS.has(ext)) {
+      base = base.slice(0, base.length - ext.length);
+    }
+    base = base.toLowerCase();
+  }
+  return base;
+}
+
 function ruleMatches(rule: PolicyRule, command: string, cwd: string, commandLine: string): boolean {
   if (rule.command !== undefined) {
     const names = Array.isArray(rule.command) ? rule.command : [rule.command];
-    if (!names.includes(command)) return false;
+    // Match the raw string first (so unusual rule names that are themselves
+    // path-qualified still work as written), then fall back to comparing
+    // normalized basenames, so a rule written as `command: rm` also catches
+    // path-qualified or differently-cased invocations of the exact same
+    // binary, e.g. "/bin/rm", "./rm", or "RM.EXE" on Windows. This keeps a
+    // rule from silently failing to match (and falling through to the
+    // policy default) just because of how the command happened to be
+    // spelled on argv[0].
+    const normalizedCommand = normalizeCommandForMatch(command);
+    const matches = names.some((name) => name === command || normalizeCommandForMatch(name) === normalizedCommand);
+    if (!matches) return false;
   }
   if (rule.command_pattern !== undefined) {
+    // Note: unlike `command`, this is tested against the raw command string
+    // exactly as given (no basename/path normalization), so a pattern like
+    // "^rm$" will not match "/bin/rm". Write the pattern to account for a
+    // possible path prefix (e.g. "(^|/)rm$") if that matters for your rule.
     if (!new RegExp(rule.command_pattern).test(command)) return false;
   }
   if (rule.args_pattern !== undefined) {

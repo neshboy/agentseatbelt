@@ -66,10 +66,19 @@ async function main(): Promise<number> {
       let policyPath = DEFAULT_POLICY_PATH;
       let logPath = DEFAULT_LOG_PATH;
       for (let i = 0; i < options.length; i++) {
-        if (options[i] === "--policy") {
-          policyPath = options[++i];
-        } else if (options[i] === "--log") {
-          logPath = options[++i];
+        if (options[i] === "--policy" || options[i] === "--log") {
+          const flag = options[i];
+          const value = options[++i];
+          if (value === undefined) {
+            console.error(`agentseatbelt run: '${flag}' requires a value.`);
+            console.error("Usage: agentseatbelt run [--policy <path>] [--log <path>] -- <command> [args...]");
+            return 2;
+          }
+          if (flag === "--policy") {
+            policyPath = value;
+          } else {
+            logPath = value;
+          }
         } else {
           console.error(`agentseatbelt run: unknown option '${options[i]}'.`);
           return 2;
